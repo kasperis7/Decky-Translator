@@ -98,7 +98,7 @@ const GameTranslator: VFC<{ logic: GameTranslatorLogic }> = ({ logic }) => {
         const s = settingsRef.current;
         if (currentTabRouteRef.current !== 'main' || !s?.enabled) return;
         const webOcr = new Set(['gemini_vision', 'googlecloud', 'ocrspace']);
-        const webTrans = new Set(['freegoogle', 'googlecloud']);
+        const webTrans = new Set(['freegoogle', 'googlecloud', 'openai']);
         const probeOcr = webOcr.has(s.ocrProvider);
         const probeTrans = s.ocrProvider !== 'gemini_vision' && webTrans.has(s.translationProvider);
         if (!probeOcr && !probeTrans) return;

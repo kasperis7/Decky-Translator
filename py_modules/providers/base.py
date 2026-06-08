@@ -31,6 +31,7 @@ class ProviderType(Enum):
     GEMINI_VISION = "gemini_vision"  # Gemini Vision (OCR + translation in one step)
     CT2 = "ct2"                 # CTranslate2 translation
     CHROME_SCREEN_AI = "chromescreenai"  # Chrome Screen AI
+    OPENAI = "openai"           # OpenAI-compatible API translation
 
 
 @dataclass

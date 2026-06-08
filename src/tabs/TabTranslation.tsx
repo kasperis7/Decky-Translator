@@ -837,7 +837,8 @@ export const TabTranslation: VFC<TabTranslationProps> = ({ scrollTarget, onScrol
                                     rgOptions={[
                                         { label: <span>On-Device</span>, data: "ct2" },
                                         { label: <span>Google Translate</span>, data: "freegoogle" },
-                                        { label: <span>Google Cloud</span>, data: "googlecloud" }
+                                        { label: <span>Google Cloud</span>, data: "googlecloud" },
+                                        { label: <span>OpenAI Compatible</span>, data: "openai" }
                                     ]}
                                     selectedOption={settings.translationProvider}
                                     onChange={(option) => updateSetting('translationProvider', option.data, 'Translation provider')}
@@ -871,6 +872,34 @@ export const TabTranslation: VFC<TabTranslationProps> = ({ scrollTarget, onScrol
                                     </div>
                                 </DialogButton>
                             )}
+                            {settings.translationProvider === 'openai' && (
+                                <DialogButton
+                                    onClick={() => {
+                                        showModal(
+                                            <ApiKeyModal
+                                                currentKey={settings.openaiApiKey}
+                                                onSave={(key) => updateSetting('openaiApiKey', key, 'OpenAI API Key')}
+                                                title="OpenAI API Key"
+                                                description="Enter your OpenAI-compatible API key (supports OpenAI, DeepSeek, vLLM, Ollama, etc.)"
+                                            />
+                                        );
+                                    }}
+                                    style={{ minWidth: "40px", width: "40px", padding: "10px 0" }}
+                                >
+                                    <div style={{ position: "relative", display: "inline-flex" }}>
+                                        <HiKey />
+                                        <div style={{
+                                            position: "absolute",
+                                            bottom: "-8px",
+                                            right: "-6px",
+                                            width: "6px",
+                                            height: "6px",
+                                            borderRadius: "50%",
+                                            backgroundColor: settings.openaiApiKey ? "#4caf50" : "#ff6b6b"
+                                        }} />
+                                    </div>
+                                </DialogButton>
+                            )}
                             {settings.translationProvider === 'ct2' && (
                                 <ModelActionButton state={nllb} actionRef={ct2ActionRef} />
                             )}
@@ -878,6 +907,39 @@ export const TabTranslation: VFC<TabTranslationProps> = ({ scrollTarget, onScrol
                         )}
                     </Field>
                 </PanelSectionRow>
+
+                {settings.translationProvider === 'openai' && (
+                    <>
+                        <PanelSectionRow>
+                            <Field
+                                focusable={true}
+                                label="API Endpoint"
+                                description="Base URL for the OpenAI-compatible API. Leave empty for OpenAI default."
+                                childrenLayout="below"
+                            >
+                                <TextField
+                                    value={settings.openaiEndpoint}
+                                    placeholder="https://api.openai.com/v1"
+                                    onChange={(e) => updateSetting('openaiEndpoint', e.target.value, 'OpenAI endpoint')}
+                                />
+                            </Field>
+                        </PanelSectionRow>
+                        <PanelSectionRow>
+                            <Field
+                                focusable={true}
+                                label="Model"
+                                description="Model name for translation. Leave empty for gpt-4o-mini."
+                                childrenLayout="below"
+                            >
+                                <TextField
+                                    value={settings.openaiModel}
+                                    placeholder="gpt-4o-mini"
+                                    onChange={(e) => updateSetting('openaiModel', e.target.value, 'OpenAI model')}
+                                />
+                            </Field>
+                        </PanelSectionRow>
+                    </>
+                )}
 
                 <PanelSectionRow>
                     <Field
@@ -942,6 +1004,26 @@ export const TabTranslation: VFC<TabTranslationProps> = ({ scrollTarget, onScrol
                                     {(settings.inputLanguage === 'auto' || settings.inputLanguage === '') && (
                                         <div style={{ color: "#ffa726", marginTop: "6px" }}>
                                             Offline translation needs a specific source language. Select one in the Languages section above.
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                            {settings.ocrProvider !== 'gemini_vision' && settings.translationProvider === 'openai' && (
+                                <>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                                        <BsStars style={{ fontSize: "18px", color: "#10a37f" }} />
+                                        <span style={{ fontWeight: "bold", color: "#dcdedf" }}>OpenAI Compatible</span>
+                                    </div>
+                                    <ProviderRating quality={3} speed={2} />
+                                    <div>- Works with OpenAI, DeepSeek, vLLM, Ollama, etc.</div>
+                                    <div>- Best quality with advanced models</div>
+                                    <div>- Requires API key</div>
+                                    {!settings.openaiApiKey && (
+                                        <div style={{ color: "#ff6b6b", marginTop: "4px" }}>You need to add your API Key</div>
+                                    )}
+                                    {settings.openaiApiKey && settings.openaiEndpoint && (
+                                        <div style={{ color: "#888", marginTop: "4px", fontSize: "11px" }}>
+                                            Endpoint: {settings.openaiEndpoint}
                                         </div>
                                     )}
                                 </>

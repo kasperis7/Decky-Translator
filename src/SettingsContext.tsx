@@ -25,10 +25,13 @@ export interface Settings {
     quickToggleEnabled: boolean; // Quick toggle overlay with right button in combo modes
     useFreeProviders: boolean; // Use free providers (OCR.space + free Google Translate) - deprecated, use ocrProvider
     ocrProvider: 'rapidocr' | 'ocrspace' | 'googlecloud' | 'gemini_vision' | 'chromescreenai'; // OCR provider
-    translationProvider: 'freegoogle' | 'googlecloud' | 'ct2'; // Translation provider
+    translationProvider: 'freegoogle' | 'googlecloud' | 'ct2' | 'openai'; // Translation provider
     googleApiKey: string; // Google Cloud Vision API key for text recognition
     geminiApiKey: string; // Gemini API key for Gemini Vision (free tier available)
     geminiModel: string; // Gemini model to use
+    openaiApiKey: string; // OpenAI-compatible API key
+    openaiEndpoint: string; // OpenAI-compatible API endpoint
+    openaiModel: string; // OpenAI-compatible model name
     debugMode: boolean; // Debug mode for verbose console logging
     fontScale: number; // Overlay font scale multiplier for external monitors
     groupingPower: number; // Text grouping aggressiveness (0.25 normal - 1.0 huge)
@@ -70,6 +73,9 @@ const initialSettings: Settings = {
     googleApiKey: "", // Empty by default, only needed for Google Cloud
     geminiApiKey: "", // Empty by default, needed for Gemini Vision
     geminiModel: "gemini-2.5-flash", // Default Gemini model
+    openaiApiKey: "", // Empty by default, needed for OpenAI-compatible API
+    openaiEndpoint: "", // Empty = use default (https://api.openai.com/v1)
+    openaiModel: "", // Empty = use default (gpt-4o-mini)
     debugMode: false, // Debug mode off by default
     fontScale: 1.0,
     groupingPower: 0.25,

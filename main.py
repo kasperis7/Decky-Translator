@@ -96,6 +96,7 @@ SENSITIVE_SETTING_KEYS = {
     "google_vision_api_key",
     "google_translate_api_key",
     "gemini_api_key",
+    "openai_api_key",
 }
 
 
@@ -981,13 +982,18 @@ class Plugin:
     _provider_manager: ProviderManager = None
     _use_free_providers: bool = True  # Default to free providers (no API key needed)
     _ocr_provider: str = "chromescreenai"  # "rapidocr" (RapidOCR), "ocrspace" (OCR.space), or "googlecloud" (Google Cloud)
-    _translation_provider: str = "freegoogle"  # "freegoogle" or "googlecloud"
+    _translation_provider: str = "freegoogle"  # "freegoogle", "googlecloud", "ct2", or "openai"
 
     # OCR API configurations - user must provide their own API key
     _google_vision_api_key: str = ""
     _google_translate_api_key: str = ""
     _gemini_api_key: str = ""
     _gemini_model: str = "gemini-2.5-flash"
+
+    # OpenAI-compatible API
+    _openai_api_key: str = ""
+    _openai_endpoint: str = ""
+    _openai_model: str = ""
 
     # Generic settings handlers
     async def get_setting(self, key, default=None):
@@ -1055,6 +1061,25 @@ class Plugin:
                         ocr_provider=self._ocr_provider,
                         translation_provider=self._translation_provider
                     )
+            elif key == "openai_api_key":
+                self._openai_api_key = value
+                if self._provider_manager:
+                    self._provider_manager.configure(
+                        use_free_providers=self._use_free_providers,
+                        google_api_key=self._google_vision_api_key,
+                        gemini_api_key=self._gemini_api_key,
+                        ocr_provider=self._ocr_provider,
+                        translation_provider=self._translation_provider,
+                        openai_api_key=value,
+                    )
+            elif key == "openai_endpoint":
+                self._openai_endpoint = value
+                if self._provider_manager:
+                    self._provider_manager.set_openai_endpoint(value)
+            elif key == "openai_model":
+                self._openai_model = value
+                if self._provider_manager:
+                    self._provider_manager.set_openai_model(value)
             elif key == "hold_time_translate":
                 self._hold_time_translate = value
             elif key == "hold_time_dismiss":
@@ -1201,6 +1226,9 @@ class Plugin:
                 "google_translate_api_key": self._google_translate_api_key,
                 "gemini_api_key": self._gemini_api_key,
                 "gemini_model": self._gemini_model,
+                "openai_api_key": self._openai_api_key,
+                "openai_endpoint": self._openai_endpoint,
+                "openai_model": self._openai_model,
                 "hold_time_translate": self._settings.get_setting("hold_time_translate", 1000),
                 "hold_time_dismiss": self._settings.get_setting("hold_time_dismiss", 500),
                 "confidence_threshold": self._settings.get_setting("confidence_threshold", 0.6),
@@ -2054,6 +2082,11 @@ class Plugin:
                 self._gemini_api_key = gemini_api_key
             self._gemini_model = self._settings.get_setting("gemini_model", "gemini-2.5-flash")
 
+            # Load OpenAI settings
+            self._openai_api_key = self._settings.get_setting("openai_api_key", "")
+            self._openai_endpoint = self._settings.get_setting("openai_endpoint", "")
+            self._openai_model = self._settings.get_setting("openai_model", "")
+
             saved_ocr_provider = self._settings.get_setting("ocr_provider")
             if saved_ocr_provider is not None:
                 self._ocr_provider = saved_ocr_provider
@@ -2105,6 +2138,9 @@ class Plugin:
                 ct2_models_dir=ct2_models_dir,
                 screenai_models_dir=screenai_models_dir,
                 rapidocr_models_dir=rapidocr_models_dir,
+                openai_api_key=self._openai_api_key,
+                openai_endpoint=self._openai_endpoint,
+                openai_model=self._openai_model,
             )
 
             # Load and apply RapidOCR-specific settings

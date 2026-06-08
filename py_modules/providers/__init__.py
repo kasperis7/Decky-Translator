@@ -23,6 +23,7 @@ from .rapidocr_provider import RapidOCRProvider
 from .chromescreenai_provider import ChromeScreenAIProvider
 from .gemini_vision import GeminiVisionProvider
 from .ct2_translate import CT2TranslateProvider
+from .openai_translate import OpenAITranslateProvider
 from .nllb_downloader import NLLBDownloader
 from .screenai_downloader import ScreenAIDownloader
 from .rapidocr_downloader import RapidOCRDownloader
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 _REACHABILITY_TTL = 4.0
 
 _WEB_OCR_PROVIDERS = {"gemini_vision", "googlecloud", "ocrspace"}
-_WEB_TRANSLATION_PROVIDERS = {"googlecloud", "freegoogle"}
+_WEB_TRANSLATION_PROVIDERS = {"googlecloud", "freegoogle", "openai"}
 
 # Export all public classes
 __all__ = [
@@ -51,6 +52,7 @@ __all__ = [
     'ChromeScreenAIProvider',
     'GeminiVisionProvider',
     'CT2TranslateProvider',
+    'OpenAITranslateProvider',
     'NLLBDownloader',
     'ScreenAIDownloader',
     'RapidOCRDownloader',
@@ -74,7 +76,10 @@ class ProviderManager:
         self._gemini_model = "gemini-2.5-flash"
         self._gemini_target_language = "en"
         self._ocr_provider_preference = "chromescreenai"  # "rapidocr", "ocrspace", "googlecloud", "gemini_vision", or "chromescreenai"
-        self._translation_provider_preference = "freegoogle"  # "freegoogle", "googlecloud", or "ct2"
+        self._translation_provider_preference = "freegoogle"  # "freegoogle", "googlecloud", "ct2", or "openai"
+        self._openai_api_key = ""
+        self._openai_endpoint = ""
+        self._openai_model = ""
         self._rapidocr_confidence = 0.5  # Default RapidOCR confidence threshold (0.0-1.0)
         self._rapidocr_box_thresh = 0.5  # Default RapidOCR box detection threshold (0.0-1.0)
         self._rapidocr_unclip_ratio = 1.6  # Default RapidOCR box expansion ratio (1.0-3.0)
@@ -107,6 +112,9 @@ class ProviderManager:
         ct2_models_dir: str = "",
         screenai_models_dir: str = "",
         rapidocr_models_dir: str = "",
+        openai_api_key: str = "",
+        openai_endpoint: str = "",
+        openai_model: str = "",
     ) -> None:
         """
         Configure provider preferences.
@@ -162,10 +170,31 @@ class ProviderManager:
         if ProviderType.GEMINI_VISION in self._ocr_providers:
             self._ocr_providers[ProviderType.GEMINI_VISION].set_api_key(gemini_api_key)
 
+        # Update OpenAI provider config
+        if openai_api_key is not None:
+            self._openai_api_key = openai_api_key
+        if openai_endpoint is not None:
+            self._openai_endpoint = openai_endpoint
+        if openai_model is not None:
+            self._openai_model = openai_model
+        if ProviderType.OPENAI in self._translation_providers:
+            provider = self._translation_providers[ProviderType.OPENAI]
+            if openai_api_key:
+                provider.set_api_key(openai_api_key)
+            if openai_endpoint:
+                provider.set_endpoint(openai_endpoint)
+            if openai_model:
+                provider.set_model(openai_model)
+
+        # Remove cached OpenAI provider if API key was cleared
+        if not self._openai_api_key:
+            self._translation_providers.pop(ProviderType.OPENAI, None)
+
         logger.debug(
             f"Provider config updated: ocr_provider={self._ocr_provider_preference}, "
             f"translation_provider={self._translation_provider_preference}, "
-            f"google_api_key_set={bool(google_api_key)}"
+            f"google_api_key_set={bool(google_api_key)}, "
+            f"openai_key_set={bool(self._openai_api_key)}"
         )
 
     def set_gemini_target_language(self, target_lang: str) -> None:
@@ -181,6 +210,20 @@ class ProviderManager:
             self._gemini_model = model
             # Remove cached provider so it gets recreated with the new model
             self._ocr_providers.pop(ProviderType.GEMINI_VISION, None)
+
+    def set_openai_endpoint(self, endpoint: str) -> None:
+        """Update the OpenAI-compatible API endpoint."""
+        self._openai_endpoint = endpoint
+        provider = self._translation_providers.get(ProviderType.OPENAI)
+        if provider:
+            provider.set_endpoint(endpoint)
+
+    def set_openai_model(self, model: str) -> None:
+        """Update the OpenAI-compatible model name."""
+        self._openai_model = model
+        provider = self._translation_providers.get(ProviderType.OPENAI)
+        if provider:
+            provider.set_model(model)
 
     def set_rapidocr_confidence(self, confidence: float) -> None:
         """
@@ -397,6 +440,8 @@ class ProviderManager:
                 provider_type = ProviderType.GOOGLE
             elif self._translation_provider_preference == "ct2":
                 provider_type = ProviderType.CT2
+            elif self._translation_provider_preference == "openai":
+                provider_type = ProviderType.OPENAI
             else:
                 provider_type = ProviderType.FREE_GOOGLE
 
@@ -415,6 +460,12 @@ class ProviderManager:
                     if self._ct2_persistent_mode:
                         provider.set_persistent_mode(True)
                     self._translation_providers[provider_type] = provider
+            elif provider_type == ProviderType.OPENAI:
+                self._translation_providers[provider_type] = OpenAITranslateProvider(
+                    api_key=self._openai_api_key,
+                    endpoint=self._openai_endpoint,
+                    model=self._openai_model,
+                )
 
         return self._translation_providers.get(provider_type)
 
@@ -487,6 +538,7 @@ class ProviderManager:
             "translation_provider_preference": self._translation_provider_preference,
             "google_api_configured": bool(self._google_api_key),
             "gemini_api_configured": bool(self._gemini_api_key),
+            "openai_api_configured": bool(self._openai_api_key),
             "ocr_provider": ocr_provider.name if ocr_provider else "None",
             "translation_provider": trans_provider.name if trans_provider else "None",
             "ocr_available": ocr_provider.is_available() if ocr_provider else False,
@@ -554,7 +606,10 @@ class ProviderManager:
             result["ocr"] = await self._probe_cached(ocr_pref, "ocr", key)
 
         if trans_pref in _WEB_TRANSLATION_PROVIDERS:
-            key = self._google_api_key if trans_pref == "googlecloud" else ""
+            if trans_pref == "openai":
+                key = self._openai_api_key
+            else:
+                key = self._google_api_key if trans_pref == "googlecloud" else ""
             result["translation"] = await self._probe_cached(trans_pref, "translation", key)
 
         return result
@@ -584,6 +639,8 @@ class ProviderManager:
                 p = self.get_ocr_provider(ProviderType.OCR_SPACE)
             elif provider == "freegoogle":
                 p = self.get_translation_provider(ProviderType.FREE_GOOGLE)
+            elif provider == "openai":
+                p = self.get_translation_provider(ProviderType.OPENAI)
             else:
                 return False, f"Unknown provider ({provider})"
 
