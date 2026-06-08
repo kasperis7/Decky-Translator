@@ -152,6 +152,9 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
                     googleApiKey: serverSettings.google_api_key || "", // Google API key
                     geminiApiKey: serverSettings.gemini_api_key || "", // Gemini API key
                     geminiModel: serverSettings.gemini_model || "gemini-2.5-flash",
+                    openaiApiKey: serverSettings.openai_api_key || "", // OpenAI-compatible API key
+                    openaiEndpoint: serverSettings.openai_endpoint || "", // OpenAI-compatible endpoint
+                    openaiModel: serverSettings.openai_model || "", // OpenAI-compatible model
                     debugMode: serverSettings.debug_mode || false,
                     fontScale: serverSettings.font_scale ?? 1.0,
                     groupingPower: serverSettings.grouping_power ?? 0.25,
@@ -234,6 +237,9 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
                 googleApiKey: 'google_api_key',
                 geminiApiKey: 'gemini_api_key',
                 geminiModel: 'gemini_model',
+                openaiApiKey: 'openai_api_key',
+                openaiEndpoint: 'openai_endpoint',
+                openaiModel: 'openai_model',
                 debugMode: 'debug_mode',
                 fontScale: 'font_scale',
                 groupingPower: 'grouping_power',
@@ -314,6 +320,11 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
                     break;
                 case 'geminiApiKey':
                     logic.setHasGeminiApiKey(!!value);
+                    break;
+                case 'openaiApiKey':
+                case 'openaiEndpoint':
+                case 'openaiModel':
+                    // These are backend-only settings, no frontend logic to update
                     break;
             }
 
